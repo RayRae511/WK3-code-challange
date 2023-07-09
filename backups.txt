@@ -1,0 +1,145 @@
+//select DOM elements that show the movie's details
+
+const posterImg = document.querySelector('#poster');
+const title = document.querySelector('#title');
+const runtime = document.querySelector('#runtime');
+const showtime = document.querySelector('#show-time');
+const tickets = document.querySelector('#available-tickets');
+
+//make a GET request to the /films endpoint
+
+fetch (`https://localhost:3000/films/${id}`)
+.then(response => response.json())//converts response body to a JSON object
+.then(film =>{ // uses the film data to update DOM elements
+    posterImg.src = `${film.poster}`;
+    title.textContent = `${film.title}`;
+    runtime.textContent = `${film.runtime} minutes`;
+    showtime.textContent = `${film.showtime}`;
+    //calculates and displays the number of available tickets
+    let availableTickets = film.capacity - film.tickets_sold;
+    tickets.innerHTML = `
+    Tickets available are: ${availableTickets}
+    <button>Buy Ticket</button>
+    `
+});
+// Select the elements from the HTML document
+const filmList = document.querySelector("#films");
+const filmDetails = document.querySelector("#film-details");
+const buyTicketButton = document.querySelector("#buy-ticket");
+const films = 'https://localhost:3000'
+// Define a function to fetch the film data from the API
+function fetchFilms() {
+  // Use the fetch method to make a GET request to /films
+  fetch("/films")
+    .then((response) => response.json()) // Convert the response to JSON
+    .then((films) => {
+      // Loop through the array of films and create a list item for each one
+      for (let film of films) {
+        // Create a new li element
+        let li = document.createElement("li");
+        // Add the classes film and item to the li element
+        li.classList.add("film", "item");
+        // Set the text content of the li element to the film title
+        li.textContent = film.title;
+        // Set the data-id attribute of the li element to the film id
+        li.dataset.id = film.id;
+        // Append the li element to the film list
+        filmList.appendChild(li);
+      }
+      // Select the first film in the list and add the selected class to it
+      let firstFilm = filmList.querySelector("li");
+      firstFilm.classList.add("selected");
+      // Display the details of the first film by calling the showFilmDetails function with its id
+      showFilmDetails(firstFilm.dataset.id);
+    });
+}
+
+// Define a function to display the details of a given film by its id
+function showFilmDetails(id) {
+  // Use the fetch method to make a GET request to /films/id
+  fetch(`/films/${id}`)
+    .then((response) => response.json()) // Convert the response to JSON
+    .then((film) => {
+      // Select the elements from the film details section
+      let poster = filmDetails.querySelector("#poster");
+      let title = filmDetails.querySelector("#title");
+      let runtime = filmDetails.querySelector("#runtime");
+      let showtime = filmDetails.querySelector("#showtime");
+      let tickets = filmDetails.querySelector("#tickets");
+
+      // Set the src attribute of the poster element to the film poster url
+      poster.src = film.poster;
+      // Set the text content of the title element to the film title
+      title.textContent = film.title;
+      // Set the text content of the runtime element to the film runtime
+      runtime.textContent = `${film.runtime} minutes`;
+      // Set the text content of the showtime element to the film showtime
+      showtime.textContent = `${film.showtime}`;
+      // Calculate and set the text content of the tickets element to the number of available tickets
+      tickets.textContent = `${film.capacity - film.tickets_sold} tickets available`;
+    });
+}
+
+// Define a function to buy a ticket for a given film by its id
+function buyTicket(id) {
+  // Use the fetch method to make a GET request to /films/id
+  fetch(`/films/${id}`)
+    .then((response) => response.json()) // Convert the response to JSON
+    .then((film) => {
+      // Check if there are any tickets available for this film
+      if (film.tickets_sold < film.capacity) {
+        // Increment the tickets_sold property by one
+        film.tickets_sold++;
+        // Use the fetch method to make a PATCH request to /films/id with the updated tickets_sold property in the body
+        fetch(`/films/${id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ tickets_sold: film.tickets_sold }),
+        })
+          .then((response) => response.json()) // Convert the response to JSON
+          .then((updatedFilm) => {
+            // Display a success message in an alert box
+            alert(`You have successfully bought a ticket for ${updatedFilm.title}!`);
+            // Update and display the details of this film by calling the showFilmDetails function with its id
+            showFilmDetails(updatedFilm.id);
+          });
+      } else {
+        // Display an error message in an alert box
+        alert(`Sorry, this showing is sold out!`);
+      }
+    });
+}
+
+// Call the fetchFilms function when the page loads
+fetchFilms();
+
+// Add an event listener to listen for click events on the film list
+filmList.addEventListener("click", (event) => {
+  // Check if the clicked element is a list item with a data-id attribute
+  if (event.target.tagName === "LI" && event.target.dataset.id) {
+    // Remove the selected class from any other list item in the list
+    for (let li of filmList.querySelectorAll("li")) {
+      li.classList.remove("selected");
+    }
+    // Add the selected class to the clicked list item
+    event.target.classList.add("selected");
+    // Display the details of the clicked film by calling the showFilmDetails function with its id
+    showFilmDetails(event.target.dataset.id);
+  }
+});
+
+// Add an event listener to listen for click events on the buy ticket button
+buyTicketButton.addEventListener("click", (event) => {
+  // Select the currently selected film in the list
+  let selectedFilm = filmList.querySelector(".selected");
+  // Check if there is a selected film
+  if (selectedFilm) {
+    // Buy a ticket for the selected film by calling the buyTicket function with its id
+    buyTicket(selectedFilm.dataset.id);
+  } else {
+    // Display an error message in an alert box
+    alert(`Please select a film first!`);
+  }
+});
